@@ -1,11 +1,14 @@
--- Made by blueloops9
+--Made by blueloops9
 
 -- The code is just awful so gl modifying it for your own needs
 -- I probably won't be adding Vectors and Dictionaries anytime soon since I don't think many people use it
--- This is based on a older version of YewScript anyway (before v1.9.9 but fixing some of the issues fixed in that version)
+-- This used to be an older version of YewScript but now it's more of a hybrid (Has features from 2.0.1 but missing some from v1.9.9)
+-- The most stable version is probably v1.9.8 but missing misc instructions like signal, dict, music, etc.
 -- Hopefully you get some use out of this interpreter as a whole
 
+
 local function loadyewscript(ExtrasTable)
+    local function tostr(Table) for I=1,#Table do Table[I]=tostring(Table[I])end return Table end
     local function split(Str,Sep)
         local Out,Length = {},1
         for I in string.gmatch(Str,"([^"..Sep.."]+)") do Out[Length]=I Length=Length+1 end
@@ -13,16 +16,20 @@ local function loadyewscript(ExtrasTable)
     end
     local function Loop(Amount)local Table = {}for I=1,Amount do Table[I]=I end return Table end
 
+    -- Probably use a different binding system but later
     local ExtraString = " has no binding, please use the Extras table to implement bindings."
     local Extras={
         ["imgbox"]=function()print("imgbox"..ExtraString)end,
         ["box"]=function()print("box"..ExtraString)end,
-	["change"]=function()print("change"..ExtraString)end,
+        ["change"]=function()print("change"..ExtraString)end,
+        ["send"]=function()print("send"..ExtraString)end,
     }
     local ExtraKeywords={
+        ["Buffer"]=function()print("Buffer"..ExtraString)end,
         ["CursorX"]=function()print("CursorX"..ExtraString)end,
-	["CursorY"]=function()print("CursorY"..ExtraString)end,
-	["Touch2D"]=function()print("Touch2D"..ExtraString)end,
+        ["CursorY"]=function()print("CursorY"..ExtraString)end,
+        ["Touch2D"]=function()print("Touch2D"..ExtraString)end,
+        ["Port"]=function()print("Port"..ExtraString)end,
     }
     local ExtrasTable = ExtrasTable or {Instructions={},Keywords={}}
     for I,V in pairs(ExtrasTable.Instructions) do Extras[I]=V end
@@ -31,36 +38,33 @@ local function loadyewscript(ExtrasTable)
 
     local CurrentLine=1
     local DoRun = true
-    local IgnoreErrors = false
 
     local ifinit,Index={},1
     local ForBuffer,IfBuffer,ElseBuffer,EndBuffer={},{},{},{}
 
     local Variables={
-        A={0},B={0},C={0},D={0},E={0},F={0},G={0},H={0},I={0},J={0},K={0},L={0},M={0},
-        N={0},O={0},P={0},Q={0},R={0},S={0},T={0},U={0},V={0},W={0},X={0},Y={0},Z={0},
+        A={},B={},C={},D={},E={},F={},G={},H={},I={},J={},K={},L={},M={},N={},O={},
+        P={},Q={},R={},S={},T={},U={},V={},W={},X={},Y={},Z={},
     }
     local Keywords={
-        ["Rand"]=function(Data1,Data2)
-            local Min = tonumber(Data1[1])
-            if Min == nil then return {math.random()} else
-            return {math.random(Min,(Data2 or {Min})[1])} end
-        end,
+        ["Rand"]=function(Data,Data2)
+		    if Data2 then
+		    	return {math.random(Data[1],Data2[1])}
+		    else
+		    	if Data then
+		    		return {math.random(Data[1],Data[1])}
+		    	else
+		    		return {math.random()}
+			    end
+		    end
+	    end,
         ["Time"]=function()return {os.clock()} end,
         ["Self"]=function()return {Code} end,
-        ["Year"]=function()return {math.floor(os.time()/31536000)+1970} end,
+        ["Year"]=function()return {0} end,
         ["Port"]=function()return {0} end,
-        ["Buffer"]=function(Channel)
-            if tostring(Channel[1]) == "10" then return {io.read()}else return {0}end
-        end,
         ["RealTime"]=function() return {os.time()} end,
-        ["Length'"]=function(Variable) return {#tostringyew(Variables[Variable])} end,
-        ["Size'"]=function(Data)
-            local VariableList,Location = GetValue(Data)
-            return {#VariableList[Location]}
-        end,
-	["User"]=function()return {"Jaatzy"} end,
-	["Players"]=function()return {"Jaatzy"} end,
+        ["Length'"]=function(Data) return {#tostringyew(Data)} end,
+        ["Size'"]=function(Data)return {#Data} end,
         ["Abs"]=function(Data)return {math.abs(Data[1])} end,
         ["Acos"]=function(Data)return {math.acos(Data[1])} end,
         ["Asin"]=function(Data)return {math.asin(Data[1])} end,
@@ -73,130 +77,161 @@ local function loadyewscript(ExtrasTable)
         ["Sinh"]=function(Data)return {math.sinh(Data[1])} end,
         ["Tan"]=function(Data)return {math.tan(Data[1])} end,
         ["Tanh"]=function(Data)return {math.tanh(Data[1])} end,
-	["CursorX"]=function()return ExtraKeywords.CursorX()end,
+        ["CursorX"]=function()return ExtraKeywords.CursorX()end,
         ["CursorY"]=function()return ExtraKeywords.CursorY()end,
         ["Find"]=function(Data,Data2)for I=1,#Data do if tostring(Data[I]) == tostring(Data2[1]) then return {I} end end return {"nil"} end,
-	["Touch2D"]=function(Data)return ExtraKeywords.Touch2D(Data)end,
+        ["Touch2D"]=function(Data2)return ExtraKeywords.Touch2D(Data2)end,
         ["Btan"]=function(Data,Data2)return {math.atan2(Data[1],Data2[1])} end,
+        ["Magnitude"]=function(D1,D2,D3)return {math.sqrt(D1[1]*D1[1]+D2[1]*D2[1]+D3[1]*D3[1])} end,
+        ["Unit"]=function(D1,D2,D3)local m=math.sqrt(D1[1]*D1[1]+D2[1]*D2[1]+D3[1]*D3[1])return {D1[1]/m,D2[1]/m,D3[1]/m} end,
+        ["Buffer"]=function(Data)return ExtraKeywords.Buffer(Data[1])end,
+        ["Sub"]=function(D1,D2,D3)local Str = tostringyew(D1,true)return {Str:sub(D2[1],(D3 or {#Str})[1] or #Str)} end,
+        ["Swap"]=function(Data) -- Not sure what the limitations are on this so it's just an offset
+            local Number = tonumber(Data[1])
+            if Number then
+                return {string.char(Number-64)}
+            else
+                return {string.byte(Number)-64}
+            end
+        end,
+        ["Port"]=function()return ExtraKeywords.Port()end,
     }
-
+    function IsVariable2(String) -- Can't remember exactly why I made this
+        if String:sub(2,2)=="'" or #String==1 then
+            for I,_ in pairs(Variables) do if String:sub(1,1)==I then return I,#I+1 end end
+        end
+        return false
+    end
     local Operations={
         ["="]=function(A,B)
-            local Variable = IsVariable(B)
+            local Variable = IsVariable2(B)
             local Keyword = IsKeyword(B)
             if Keyword then
                 local KeywordReference,Split = Keywords[Keyword],split(B:sub(#Keyword+1),"'")
                 if Split then
                     local List,Loc=GetValue(Split[1])
-                    local List2,Loc2 = {0},0
+                    local List2,Loc2,List3,Loc3 = {},0,{},0
                     if Split[2] then List2,Loc2=GetValue(Split[2]) end
-                    return function()Variables[A]=KeywordReference(List[Loc],List2[Loc2]) end
-                else return function()Variables[A]=KeywordReference() end end
+		    if Split[3] then List3,Loc3=GetValue(Split[3]) end
+                    return function()Variables[A]=tostr(KeywordReference(List[Loc],List2[Loc2],List3[Loc3])) end
+                else return function()Variables[A]=tostr(KeywordReference()) end end
             elseif Variable then
                 local Split = split(B,"'")[2]
                 if Split then
                     local List,Loc=GetValue(Split)
-                    return function()Variables[A]={Variables[Variable][List[Loc][1]]} end
+                    return function()Variables[A]={Variables[Variable][tonumber(List[Loc][1])]} end
                 else return function()local Table = {} for I=1,#Variables[Variable] do Table[I]=Variables[Variable][I] end Variables[A]=Table end end
-            elseif B:find(";") then return function()Variables[A]=split(B,";") end
-            else local E = tonumber(B) E=E==nil and B or E return function()Variables[A]={E} end
+            elseif B:find(";") then return function()
+		local Length,Table = 1,{}
+		for I in string.gmatch(B,"([^;]+)") do
+			Table[Length]=I
+			Length=Length+1
+		end
+		Variables[A]=Table
+	    end
+            else local E = tonumber(B) E=E==nil and B or E return function()Variables[A]={B} end
             end
         end,
         ["+"]=function(A,B)
-            local Variable = IsVariable(B)
+            local Variable = IsVariable2(B)
             if Variable then
-                local Split = split(B,"'")[2]
-                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=Variables[A][1]+Variables[Variable][List[Loc]] end
-                else return function()Variables[A][1]=Variables[A][1]+Variables[Variable][1] end end
-            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=Variables[A][1]+E end
+        	local Split = split(B,"`")[2]
+                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=tostring(tonumber(Variables[A][1])+tonumber(Variables[Variable][tonumber(List[Loc][1])])) end
+                else return function()Variables[A][1]=tostring(tonumber(Variables[A][1])+tonumber(Variables[Variable][1])) end end
+            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=tostring(tonumber(Variables[A][1])+E) end
             end
         end,
         ["-"]=function(A,B)
-            local Variable = IsVariable(B)
+            local Variable = IsVariable2(B)
             if Variable then
-                local Split = split(B,"'")[2]
-                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=Variables[A][1]-Variables[Variable][List[Loc]] end
-                else return function()Variables[A][1]=Variables[A][1]-Variables[Variable][1] end end
-            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=Variables[A][1]-E end
+                local Split = split(B,"`")[2]
+                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=tostring(tonumber(Variables[A][1])-tonumber(Variables[Variable][tonumber(List[Loc][1])])) end
+                else return function()Variables[A][1]=tostring(tonumber(Variables[A][1])-tonumber(Variables[Variable][1])) end end
+            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=tostring(tonumber(Variables[A][1])-E) end
             end
         end,
         ["*"]=function(A,B)
-            local Variable = IsVariable(B)
+            local Variable = IsVariable2(B)
             if Variable then
-                local Split = split(B,"'")[2]
-                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=Variables[A][1]*Variables[Variable][List[Loc]] end
-                else return function()Variables[A][1]=Variables[A][1]*Variables[Variable][1] end end
-            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=Variables[A][1]*E end
+                local Split = split(B,"`")[2]
+                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=tostring(tonumber(Variables[A][1])*tonumber(Variables[Variable][tonumber(List[Loc][1])])) end
+                else return function()Variables[A][1]=tostring(tonumber(Variables[A][1])*tonumber(Variables[Variable][1])) end end
+            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=tostring(tonumber(Variables[A][1])*E) end
             end
         end,
         ["\\"]=function(A,B)
-            local Variable = IsVariable(B)
+            local Variable = IsVariable2(B)
             if Variable then
-                local Split = split(B,"'")[2]
-                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=Variables[A][1]/Variables[Variable][List[Loc]] end
-                else return function()Variables[A][1]=Variables[A][1]/Variables[Variable][1] end end
-            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=Variables[A][1]/E end
+                local Split = split(B,"`")[2]
+                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=tostring(tonumber(Variables[A][1])/tonumber(Variables[Variable][tonumber(List[Loc][1])])) end
+                else return function()Variables[A][1]=tostring(tonumber(Variables[A][1])/tonumber(Variables[Variable][1])) end end
+            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=tostring(tonumber(Variables[A][1])/E) end
             end
         end,
         ["^"]=function(A,B)
-            local Variable = IsVariable(B)
+            local Variable = IsVariable2(B)
             if Variable then
-                local Split = split(B,"'")[2]
-                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=Variables[A][1]^Variables[Variable][List[Loc]] end
-                else return function()Variables[A][1]=Variables[A][1]^Variables[Variable][1] end end
-            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=Variables[A][1]^E end
+                local Split = split(B,"`")[2]
+                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=tostring(tonumber(Variables[A][1])^tonumber(Variables[Variable][tonumber(List[Loc][1])])) end
+                else return function()Variables[A][1]=tostring(tonumber(Variables[A][1])^tonumber(Variables[Variable][1])) end end
+            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=tostring(tonumber(Variables[A][1])^E) end
             end
         end,
         ["%"]=function(A,B)
-            local Variable = IsVariable(B)
+            local Variable = IsVariable2(B)
             if Variable then
-                local Split = split(B,"'")[2]
-                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=Variables[A][1]%Variables[Variable][List[Loc]] end
-                else return function()Variables[A][1]=Variables[A][1]%Variables[Variable][1] end end
-            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=Variables[A][1]%E end
+                local Split = split(B,"`")[2]
+                if Split then local List,Loc=GetValue(Split)return function()Variables[A][1]=tostring(tonumber(Variables[A][1])%tonumber(Variables[Variable][tonumber(List[Loc][1])])) end
+                else return function()Variables[A][1]=tostring(tonumber(Variables[A][1])%tonumber(Variables[Variable][1])) end end
+            else local E=tonumber(B)E=(E==nil and B or E) return function()Variables[A][1]=tostring(tonumber(Variables[A][1])%E) end
             end
         end,
         ["@"]=function(A,B)
             local BL,BLo = GetValue(B)
             return function()
-                if BL[BLo][1] == -1 then Variables[A][1]=math.floor(Variables[A][1])
-                elseif BL[BLo][1] == 0 then Variables[A][1]=math.floor(Variables[A][1]+.5)
-                else Variables[A][1]=math.ceil(Variables[A][1])end
+		local Var = tonumber(Variables[A][1])
+                if tonumber(BL[BLo][1]) == -1 then Variables[A][1]=tostring(math.floor(Var))
+                elseif tonumber(BL[BLo][1]) == 0 then Variables[A][1]=tostring(math.floor(Var+.5))
+                else Variables[A][1]=tostring(math.ceil(Var))end
             end
         end,
         [">"]=function(A,B)
             local BL,BLo = GetValue(B)
             return function()
-                if Variables[A][1] < BL[BLo][1] then Variables[A][1] = BL[BLo][1]end
+                if tonumber(Variables[A][1]) < tonumber(BL[BLo][1]) then Variables[A][1] = tostring(BL[BLo][1])end
             end
         end,
         ["<"]=function(A,B)
             local BL,BLo = GetValue(B)
             return function()
-                if Variables[A][1] > BL[BLo][1] then Variables[A][1] = BL[BLo][1]end
+                if tonumber(Variables[A][1]) > tonumber(BL[BLo][1]) then Variables[A][1] = tostring(BL[BLo][1])end
             end
         end
     }
-    Operations["`"]=Operations["*"]
+    Operations["`"]=Operations["*"] -- Not sure if this is even in YewScript anymore
 
     local LogicOperations={
         ["="]=function(A,B,C,D,Line)return function()
-            if tostringyew(A[B])~=tostringyew(C[D]) then CurrentLine=IfBuffer[Line][2]end
+            local E,F = tonumber(tostringyew(A[B])),tonumber(tostringyew(C[D]))
+            if E and F then if E~=F then CurrentLine=IfBuffer[Line][2]end
+            else if tostringyew(A[B],true)~=tostringyew(C[D],true) then CurrentLine=IfBuffer[Line][2]end end
         end end,
         ["!"]=function(A,B,C,D,Line)return function()
-            if tostringyew(A[B])==tostringyew(C[D]) then CurrentLine=IfBuffer[Line][2]end
+            local E,F = tonumber(tostringyew(A[B])),tonumber(tostringyew(C[D]))
+            if E and F then if E==F then CurrentLine=IfBuffer[Line][2]end
+            else if tostringyew(A[B],true)==tostringyew(C[D],true) then CurrentLine=IfBuffer[Line][2]end end
         end end,
         [">"]=function(A,B,C,D,Line)return function()
-            if not (A[B][1]>C[D][1]) then CurrentLine=IfBuffer[Line][2]end
+            if not (tonumber(A[B][1])>tonumber(C[D][1])) then CurrentLine=IfBuffer[Line][2]end
         end end,
         ["<"]=function(A,B,C,D,Line)return function()
-            if not (A[B][1]<C[D][1]) then CurrentLine=IfBuffer[Line][2]end
+            if not (tonumber(A[B][1])<tonumber(C[D][1])) then CurrentLine=IfBuffer[Line][2]end
         end end,
         ["}"]=function(A,B,C,D,Line)return function()
-            if not (A[B][1]>=C[D][1]) then CurrentLine=IfBuffer[Line][2]end
+            if not (tonumber(A[B][1])>=tonumber(C[D][1])) then CurrentLine=IfBuffer[Line][2]end
         end end,
         ["{"]=function(A,B,C,D,Line)return function()
-            if not (A[B][1]<=C[D][1]) then CurrentLine=IfBuffer[Line][2]end
+            if not (tonumber(A[B][1])<=tonumber(C[D][1])) then CurrentLine=IfBuffer[Line][2]end
         end end,
         ["]"]=function(A,B,C,D,Line)return function()
             if not tostringyew(A[B]):find(tostringyew(C[D])) then CurrentLine=IfBuffer[Line][2]end
@@ -214,10 +249,15 @@ local function loadyewscript(ExtrasTable)
         for I,_ in pairs(Keywords) do if String:sub(1,#I)==I then return I,#I+1 end end return false
     end
 
-    function tostringyew(Value)
+    function tostringyew(Value,t)
         local Type = type(Value)
-        if Type=="table" then return table.concat(Value,";")
-        else return Value end
+        if Type=="table" then
+            if #Value>1 then
+	        return table.concat(Value,";")
+            else return (t and tostring(Value[1]) or Value[1])end
+        else
+            return (t and tostring(Value) or Value)
+        end
     end
 
     function GetValue(Data)
@@ -239,23 +279,23 @@ local function loadyewscript(ExtrasTable)
     local Instructions={
         ["goto"]=function(line)
             local List,Loc = GetValue(line)
-            return function()CurrentLine=List[Loc][1]-1 end
+            return function()CurrentLine=tonumber(List[Loc][1])-1 end
         end,
         ["leapto"]=function(line)
             local List,Loc = GetValue(line)
-            return function()CurrentLine=CurrentLine+List[Loc][1]-1 end
+            return function()CurrentLine=CurrentLine+tonumber(List[Loc][1])-1 end
         end,
-        ["beep"]=function(pitch)
+        ["beep"]=function(pitch) -- Should probably switch this to a binding
             local List,Loc = GetValue(pitch)
             return function() print("Beep!",List[Loc][1]) end
         end,
-        ["print"]=function(VariableKeywordDatatype)
+        ["print"]=function(VariableKeywordDatatype) -- Lol overcomplicated
             local Keyword = IsKeyword(VariableKeywordDatatype)
             if Keyword then
                 local Split = split(VariableKeywordDatatype,"'")
                 if Split[2] then
                     local List,Loc = GetValue(Split[2])
-                    return function()print(Keywords[Keyword]()[List[Loc]]) end
+                    return function()print(Keywords[Keyword]()[tonumber(List[Loc])]) end
                 else return function()print(tostringyew(Keywords[Keyword]()))end end
             else
                 local Variable = IsVariable(VariableKeywordDatatype)
@@ -263,7 +303,7 @@ local function loadyewscript(ExtrasTable)
                     local Split = split(VariableKeywordDatatype,"'")[2]
                     if Split then
                         local List,Loc = GetValue(Split)
-                        return function()print(Variables[Variable][List[Loc]]) end
+                        return function()print(Variables[Variable][tonumber(List[Loc])]) end
                     else return function() print(tostringyew(Variables[Variable])) end end
                 else return function() print(VariableKeywordDatatype) end end
             end
@@ -275,9 +315,8 @@ local function loadyewscript(ExtrasTable)
             local DatL,DatLoc = GetValue(Data[2])
             local Pos,PosLoc = GetValue(Data[3] or "")
 
-
             return function ()
-                Variables[Variable][Pos[PosLoc]=="" and #Variables[Variable]+1 or Pos[PosLoc]]=DatL[DatLoc]
+                Variables[Variable][Pos[PosLoc][1]=="" and #Variables[Variable]+1 or tonumber(Pos[PosLoc][1])]=tostring(DatL[DatLoc][1])
             end
         end,
         ["remove"]=function(Data)
@@ -285,14 +324,14 @@ local function loadyewscript(ExtrasTable)
             local Pos,PosLoc = GetValue(Data[2] or "")
             Data = Data[1]
 
-            return function()Variables[Data][Pos[PosLoc]=="" and #Variables[Data] or Pos[PosLoc]]=nil end
+            return function()table.remove(Variables[Data],Pos[PosLoc][1]=="" and #Variables[Data] or tonumber(Pos[PosLoc][1])) end
         end,
         ["reset"]=function()return function()
             ForBuffer,CurrentLine={},0
             for I,_ in pairs(Variables) do Variables[I]={0} end
         end end,
         ["for"]=function(Data)return function()
-            ForBuffer[#ForBuffer+1] = {1,#Variables[Data],Variables[Data],CurrentLine}
+            ForBuffer[#ForBuffer+1] = {1,#Variables[Data],Variables[Data],CurrentLine,true}
             local a = Variables[Data][1]
             Variables.Z={tonumber(a)==nil and a or tonumber(a)}
         end end,
@@ -301,16 +340,17 @@ local function loadyewscript(ExtrasTable)
             local Split = split(Data,"'")[2]
             if Split then Bruh=GetValue(Split) end
             return function()
-            Variables.Z={1}
-            ForBuffer[#ForBuffer+1] = {1,DataL[DataLoc][1],Loop(DataL[DataLoc][1]),CurrentLine}
+            ForBuffer[#ForBuffer+1] = {1,tonumber(DataL[DataLoc][1]),Loop(tonumber(DataL[DataLoc][1])),CurrentLine} -- No Z update why jaatzy why
         end end,
         ["endloop"]=function()return function()
             local Loop = ForBuffer[#ForBuffer]
             Loop[1]=Loop[1]+1
             if Loop[1]<=Loop[2] then 
-                local a = Loop[3][Loop[1]]
-                Variables.Z = {tonumber(a)==nil and a or tonumber(a)}
-                CurrentLine=Loop[4]
+                if Loop[5] then
+                    local a = Loop[3][Loop[1]]
+                    Variables.Z = {tostring(a)}
+                end
+		CurrentLine=Loop[4]
             else    
                 table.remove(ForBuffer,#ForBuffer)
             end
@@ -341,24 +381,8 @@ local function loadyewscript(ExtrasTable)
             return function() end
         end,
         ["wait"]=function(Data)
-            local A,B = GetValue(Data)
-            return function()local Base=os.clock() repeat until os.clock()>Base+A[B][1] end
-        end,
-        ["sweep"]=function(Data)
-            local Data = split(Data,"'")
-            local A,B = GetValue(Data[1])
-            local C,D = GetValue(Data[2])
-            return function()local T,V=A[B],tostring(C[D][1]) for I=1,#T do if tostring(T[I])==V then table.remove(T,I) end end end
-        end,
-        ["remove"]=function(Data)
-            local Data = split(Data,"'")
-            local A,B = GetValue(Data[1])
-            local C,D = GetValue(Data[2])
-            return function()table.remove(A[B],C[D])end
-        end,
-        ["errmode"]=function(Data)
-            local A,B = GetValue(Data)
-            return function()IgnoreErrors = A[B]==0 end
+            local A,B = GetValue(Data) -- Could replace current method with os.execute("sleep")??
+            return function()local Base=os.clock() repeat until os.clock()>Base+tonumber(A[B][1]) end
         end,
         ["imgbox"]=function(Data)
             local Data = split(Data,"'")
@@ -376,12 +400,25 @@ local function loadyewscript(ExtrasTable)
             local Data = split(Data,"'")
             local IdL,IdI = GetValue(Data[1])local PosXL,PosXI = GetValue(Data[2])local PosYL,PosYI = GetValue(Data[3])local SXL,SXI = GetValue(Data[4])
             local SYL,SYI = GetValue(Data[5])local TxtL,TxtI = GetValue(Data[6])local BCL,BCI = GetValue(Data[7])local CL,CI = GetValue(Data[8])
-            return function() Extras.change(IdL[IdI],PosXL[PosXI],PosYL[PosYI],SXL[SXI],SYL[SYI],TxtL[TxtI],BCL[BCI],CL[CI])end
+            return function()Extras.change(IdL[IdI],PosXL[PosXI],PosYL[PosYI],SXL[SXI],SYL[SYI],TxtL[TxtI],BCL[BCI],CL[CI])end
         end,
         ["delete"]=function(Data)
             local Data = split(Data,"'")
             local Id,IdLoc = GetValue(Data[1])
             return function() Extras.delete(Id[IdLoc])end
+	    end,
+        ["affix"]=function(Data)
+            local Data = split(Data,"'")
+            local Variable,VariableLoc = GetValue(Data[1])
+            local String,StringLoc = GetValue(Data[2])
+            return function() Variable[VariableLoc][1]=Variable[VariableLoc][1]..String[StringLoc][1]  end
+        end,
+	["send"]=function(Data)
+		local Data = split(Data,"'")
+		local Address,AddressLoc = GetValue(Data[1])
+		local Data,DataLoc = GetValue(Data[2])
+		local Channel,ChannelLoc = GetValue(Data[3])
+		return function() Extras.send(Address[AddressLoc],Data[DataLoc],Channel[ChannelLoc]) end
 	end,
     }
     InstructionArray={}
@@ -391,9 +428,11 @@ local function loadyewscript(ExtrasTable)
     local function CompileProgram(Code)
         local Program={}
 
+        Code = Code:gsub("\r",""):gsub("\t","") -- Windows does this and Linux hates it on second thought it's probably a bad idea to remove tabs but later I guess
         Code = table.concat(split(Code,"\n"),"/")
         for I,V in pairs(split(Code,"/")) do
             local First = V:sub(1,1)
+            if V == "" then error("error at line "..I..": line cannot be empty!") end
 	    if First~="-" then
                 local Instruction,Start = IsInstruction(V)
                 if Instruction then
@@ -420,12 +459,9 @@ local function loadyewscript(ExtrasTable)
 	CurrentLine=1
 	local Program,Length = CompileProgram(Code)
 	return function()
-            if CurrentLine>Length then return true end
-	    local A, B = pcall(Program[CurrentLine])
-            if not A and not IgnoreErrors then error("Error at line "..CurrentLine) end
-            CurrentLine = CurrentLine + 1
-            return false
+		if CurrentLine>Length then return true end Program[CurrentLine]()CurrentLine = CurrentLine+1 return false
 	end
+	-- Old code when the step function didn't exist
         --while DoRun do if CurrentLine>Length then break end  Program[CurrentLine]()CurrentLine=CurrentLine+1 end
     end
 end
