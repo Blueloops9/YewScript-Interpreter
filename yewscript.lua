@@ -87,25 +87,30 @@ function yewscript.getDataWIndex(str)
 
     if hasIndex then
         str = index[1]
-        
         table.remove(index, 1)
-
-        for i, v in pairs(index) do
-            ---@diagnostic disable-next-line: assign-type-mismatch
-            index[i] = yewscript.getData(v)
-        end
     end
 
     for _, Keyword in pairs(yewscript.sortedKeywords) do
-        if Keyword[1]:sub(1, #Keyword[1]) == str then
+        if str:sub(1, #Keyword[1]) == Keyword[1] then
             keyword = Keyword[1]
             break
         end
     end
 
+    if hasIndex then
+        for i, v in pairs(index) do
+            ---@diagnostic disable-next-line: assign-type-mismatch
+            index[i] = yewscript.getData(v)
+        end
+    elseif keyword then
+        ---@diagnostic disable-next-line: cast-local-type
+        index = #str > #keyword and {yewscript.getData(str:sub(#keyword+1, -1))}
+    end
+
     local value
 
     if keyword then
+        ---@diagnostic disable-next-line: param-type-mismatch
         value = yewscript.Keywords[keyword](unpack(index or {}))
     else
         value = yewscript.getData(str)

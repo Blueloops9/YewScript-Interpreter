@@ -18,7 +18,7 @@ Instructions and keywords like `wait`, `Buffer`, `signal`, etc are not included 
 ## Custom instructions/keywords
 Pretty straight forward:
 ```lua
-local code = "A=25/A=SqrtA/B=tableinit10'A/printB/destroyA"
+local code = "A=25/A=SqrtA/tableinit10'A/printB/destroyA/printA"
 
 local yewscript = require("yewscript")
 
@@ -30,11 +30,12 @@ end end
 
 yewscript.Instructions.tableinit = function() return function(num, multiplier)
   local newTable = {}
+
   for i = 1, num do
     newTable[i] = i * multiplier
   end
 
-  return num
+  yewscript.Variables.B = newTable
 end end
 
 yewscript:Compile(code)
