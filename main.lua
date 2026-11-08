@@ -1,8 +1,7 @@
-local loadyewscript = require("yewscript")
+local code = "printHello world!"
 
+local yewscript = require("yewscript")
 
-local Code = "printhello world!"
-local Yewscript = loadyewscript()(Code)
-local Stop=false
+yewscript:Compile(code)
 
-repeat Stop=Yewscript() until Stop
+yewscript:Step(math.huge)
