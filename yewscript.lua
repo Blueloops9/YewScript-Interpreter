@@ -124,6 +124,7 @@ end
 
 yewscript.Code = ""
 yewscript.Compiled = {}
+yewscript.Errormode = true
 
 --During compilation this loops through and resets back to zero when ready
 yewscript.CurrentLine = 0
@@ -231,11 +232,10 @@ yewscript.loopstack, yewscript.ifstack, yewscript.ifbranches = {}, {}, {}
 yewscript.Instructions = {
     ["reset"] = function()return function()yewscript:Reset()end end,
     ["goto"] = function()return function(line)yewscript.CurrentLine = line - 1 end end,
-    ["errmode"] = function()return function(errormode)
-
-    end end,
+    ["errmode"] = function()return function(errormode)yewscript.Errormode = errormode == 1 end end,
     ["for"] = function()return function(array)
-        table.insert(yewscript.loopstack, {yewscript.CurrentLine, 1, #array})
+        table.insert(yewscript.loopstack, {yewscript.CurrentLine, 1, #array, array})
+        yewscript.Variables.Z = array[1]
     end end,
     ["endloop"] = function()return function()
         local currentLoop = yewscript.loopstack[#yewscript.loopstack]
@@ -246,8 +246,8 @@ yewscript.Instructions = {
             yewscript.CurrentLine = currentLoop[1]
             currentLoop[2] = currentLoop[2] + 1
 
-            if currentLoop[3] then
-                yewscript.Variables.Z = currentLoop[2]
+            if currentLoop[4] then
+                yewscript.Variables.Z = currentLoop[4][currentLoop[2]]
             end
         end
     end end,
@@ -264,7 +264,7 @@ yewscript.Instructions = {
         table.remove(variable, pos)
     end end,
     ["loop"] = function()return function(num)
-        table.insert(yewscript.loopstack, {yewscript.CurrentLine, 1, num, true})
+        table.insert(yewscript.loopstack, {yewscript.CurrentLine, 1, num})
     end end,
     ["if"] = function(raw)
         local branch = {}
@@ -346,6 +346,8 @@ local whitespace = {
 ---Compiles yewscript code, run the yewscript code via `yewscript:Step`
 ---@param code string
 function yewscript:Compile(code)
+    yewscript.Code = code
+
     local formatted = code:gsub("\n", "/")
 
     local sortedInstructions, sortedKeywords = {}, {}
@@ -403,7 +405,7 @@ end
 ---@param iterations number? The amount of steps to execute
 ---@return boolean
 function yewscript:Step(iterations)
-    for i = 1, iterations do
+    local function run()
         yewscript.CurrentLine = yewscript.CurrentLine + 1
         if yewscript.Compiled[yewscript.CurrentLine] then
             local func = yewscript.Compiled[yewscript.CurrentLine]
@@ -421,6 +423,22 @@ function yewscript:Step(iterations)
             end
         else
             return false
+        end
+
+        return true
+    end
+
+    for i = 1, iterations do
+        if yewscript.Errormode then
+            if not run() then return false end
+        else
+            local returning
+            
+            local success, result, a = pcall(function()
+                returning = run()
+            end)
+
+            if returning == false then return false end
         end
     end
 
