@@ -161,6 +161,11 @@ yewscript.LogicOperators = {
 }
 
 yewscript.Keywords = {
+    Buffer = function(channel)
+        local data = yewscript.Buffer[channel]
+        yewscript.Buffer[channel] = nil
+        return data
+    end,
     Rand = math.random,
     Time = os.clock,
     Self = function() return yewscript.Code end,
@@ -252,7 +257,7 @@ yewscript.Instructions = {
         end
     end end,
     ["insert"] = function(variable)return function(_, data, pos)
-        table.insert(yewscript.Variables[variable], pos, data)
+        table.insert(yewscript.Variables[variable], pos or #yewscript.Variables[variable] + 1, data)
     end end,
     ["remove"] = function(variable)return function(_, pos)
         if pos == 0 then
@@ -433,7 +438,7 @@ function yewscript:Step(iterations)
             if not run() then return false end
         else
             local returning
-            
+
             local success, result, a = pcall(function()
                 returning = run()
             end)
